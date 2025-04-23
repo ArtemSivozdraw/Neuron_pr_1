@@ -14,14 +14,14 @@ def sum_of_scales(weights, inputs, bias):
 time_array = [2.57, 4.35, 1.27, 5.46, 1.30, 4.92, 1.31, 4.14, 1.97, 5.67, 0.92, 4.76, 1.72, 4.44, 1.49]
 
 propagation_speed = 0.001
-connections = [-0.48243474657619106, -0.5610720245678693, -0.8792767556275607]
-bias = 6.328349459611023
+connections = [1]*3
+bias = 0
 
 cost_history = []
 bias_history = []
 weight_history = [[] for _ in range(3)]
 
-epoch = 10000
+epoch = 20000
 for current in range(epoch):
     avarage_cost = 0
     avarage_connection_update = [0.0] * 3

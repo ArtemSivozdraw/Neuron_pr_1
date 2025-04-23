@@ -1,131 +1,100 @@
 import math
+import matplotlib.pyplot as plt
 
-class Neuron_network :
+def activasion_function(x):
+    return 6 / (1 + math.exp(-x))
 
+def diff_activasion_function(x):
+    s = activasion_function(x) / 6
+    return 6 * s * (1 - s)
 
-    def __init__(self, input_array) :
-        self.network = {"input" : input_array}
-        self.layer_count = 0
+def sum_of_scales(weights, inputs, bias):
+    return sum(w * x for w, x in zip(weights, inputs)) + bias
+
+time_array = [2.57, 4.35, 1.27, 5.46, 1.30, 4.92, 1.31, 4.14, 1.97, 5.67, 0.92, 4.76, 1.72, 4.44, 1.49]
+
+propagation_speed = 0.001
+connections = [-0.48243474657619106, -0.5610720245678693, -0.8792767556275607]
+bias = 6.328349459611023
+
+cost_history = []
+bias_history = []
+weight_history = [[] for _ in range(3)]
+
+epoch = 10000
+for current in range(epoch):
+    avarage_cost = 0
+    avarage_connection_update = [0.0] * 3
+    avarage_bias_update = 0.0
+    cycle_counter = 0
+
+    for i in range(len(time_array) - 5):
+        inputs = time_array[i:i+3]
+        s = sum_of_scales(connections, inputs, bias)
+        a = activasion_function(s)
+        expected_value = time_array[i + 3]
+
+        cost = (expected_value - a) ** 2
+        cost_delta = 2 * (expected_value - a)
+        output_delta = diff_activasion_function(s)
+        bias_delta = cost_delta * output_delta
+
+        for k in range(3):
+            avarage_connection_update[k] += bias_delta * inputs[k]
+        avarage_bias_update += bias_delta
+        avarage_cost += cost
+        cycle_counter += 1
+
+    bias += propagation_speed * (avarage_bias_update / cycle_counter)
+    for i in range(3):
+        connections[i] += propagation_speed * (avarage_connection_update[i] / cycle_counter)
+
+    cost_history.append(avarage_cost / cycle_counter)
+    bias_history.append(bias)
+    for i in range(3):
+        weight_history[i].append(connections[i])
     
+    progres_bar = round(current / epoch * 100,2)
+    print("\r",progres_bar, round(avarage_cost / cycle_counter, 2), end=" ")
 
-    def add_layer(self, neuron_count) :
-        self.layer_count += 1
-        self.add_to_network_dict("layer",self.layer_count,[None]*neuron_count)
-        self.add_to_network_dict("bias",self.layer_count,[0]*neuron_count)
+print()
 
-        if self.layer_count == 1 :
-            neuron_count_of_previus_layer = len(self.network["input"])
-        else :
-            neuron_count_of_previus_layer = len(self.get_from_network_dict("layer",1)) 
-        self.add_to_network_dict("connection",self.layer_count,[[1]*neuron_count_of_previus_layer]*neuron_count)
+for i in range(len(time_array)-3) :
+    s = sum_of_scales(connections,time_array[i: i+3],bias)
+    a = activasion_function(s)
+    expected_value = time_array[i+3]
 
-    
-    def add_to_network_dict(self,type_of_input, number_of_input, input) :
-        self.network[type_of_input+"-"+str(number_of_input)] = input
+    print(a , expected_value)
 
+print()
 
-    def get_from_network_dict(self,type_of_output,number_of_output) :
-        try:
-            return self.network[type_of_output+"-"+str(number_of_output)]
-        except KeyError :
-            return None
-        
-
-    def calculate_neuron_output(self,inputs, coefficients, bias) :
-        sum = 0
-        for i in range(len(inputs)) :
-            sum += inputs[i]*coefficients[i]
-        sum+=bias
-        return self.activasion_function(sum)
+print(avarage_cost / cycle_counter)
+print(bias,connections)
 
 
-    def activasion_function(self,x) :
-        return 1/(1+math.exp(-x))*10
-    
+# --- Побудова графіків ---
+fig, axs = plt.subplots(2, 1, figsize=(12, 10))
 
-    def derivative_of_activasion_function(self,x) :
-        return self.activasion_function(x)*(1-1/(1+math.exp(-x)))
+# Графік помилки
+axs[0].plot(cost_history, label="Середня помилка (Cost)", color='blue')
+axs[0].set_title("Зміна помилки під час навчання")
+axs[0].set_xlabel("Епоха")
+axs[0].set_ylabel("Cost")
+axs[0].legend()
+axs[0].grid(True)
 
-    
-    def calculate_network_output(self) :
-        i = 1 
-        if not self.get_from_network_dict("layer",i) :
-            print(self.network)
-            print("Пуста мережа, потрібно хоча б один шар нейронів.")
-            exit(0)
-        while self.get_from_network_dict("layer",i) :
-            if i == 1 :
-                previus_layer = self.network["input"]
-            else :
-                previus_layer = self.get_from_network_dict("layer",i-1)
-            
-            for j in range (len(self.get_from_network_dict("layer",i))) :
-                connection = self.get_from_network_dict("connection",i)[j]
-                bias = self.get_from_network_dict("bias",i)[j]
-                self.network["layer-"+str(i)][j] = self.calculate_neuron_output(previus_layer, connection, bias)
-            
-            i+=1
-    
+# Графік ваг і bias
+axs[1].plot(bias_history, label="Зсув (Bias)", linestyle='--', color='black')
+colors = ['red', 'green', 'orange']
+for i in range(3):
+    axs[1].plot(weight_history[i], label=f"Вага {i}", color=colors[i])
+axs[1].set_title("Зміна ваг і зсуву під час навчання")
+axs[1].set_xlabel("Епоха")
+axs[1].set_ylabel("Значення параметрів")
+axs[1].legend()
+axs[1].grid(True)
 
-    def get_last_layer(self) :
-        i = 1
-        while self.get_from_network_dict("layer",i) :
-            i+=1
-        return self.get_from_network_dict("layer",i-1)
-    
-
-    def get_size_of_network(self) :
-        i = 1
-        while self.get_from_network_dict("layer",i) :
-            i+=1
-        return i-1        
+plt.tight_layout()
+plt.show()
 
 
-    def calculate_network_cost(self,expected_value) :
-        output = self.get_last_layer()
-        cost = 0
-        for i in range (len(output)) :
-            cost += math.pow(output[i]-expected_value[i],2)
-        return cost
-
-
-    def create_network_update_variable(self) :
-        var = self.network
-        i = 1
-        while self.get_from_network_dict("layer",i) :
-            del var["layer-"+str(i)]
-        return var
-
-
-    def train_network(self,train_inputs) :
-        
-        for _ in range(20):
-
-            connections_update = [0] * len(self.get_from_network_dict("connection",1)[0])
-            bias_update = 0
-
-            for i in range (len(train_inputs)-3) :
-                cycles = 0
-
-                self.network["input"] = train_inputs[i : i+3]
-                self.calculate_network_output()
-                expected_value = train_inputs[i+3]
-
-                a = self.network["layer-1"][0]
-                delta = 2 * (expected_value - a) * a * (1-a)
-
-                input = self.network["input"]
-                for j in range (len(input)) :
-                    connections_update[j] += delta * input[j]
-                bias_update += delta
-                cycles+=1
-
-            
-            self.network["bias-1"][0] -= 0.001 * bias_update
-            for i in range(len(self.network["connection-1"][0])) :
-                self.network["connection-1"][0][i] -= 0.001 * connections_update[i]
-            print(self.network["connection-1"],self.network["bias-1"][0])
-time_array = [2.57, 4.35, 1.27, 5.46, 1.30, 4.92, 1.31, 4.14, 1.97, 5.67, 0.92, 4.76, 1.72, 4.44, 1.49] 
-net = Neuron_network(time_array[:3])
-net.add_layer(1)
-net.train_network(time_array[2:])
